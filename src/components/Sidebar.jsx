@@ -42,7 +42,7 @@ export default function Sidebar({ files, categories, favorites, activeCategory, 
   }, [categories, favorites, t])
 
   return (
-    <div className="flex flex-col border-r border-border bg-card h-full w-48 shrink-0">
+    <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-2">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {t('library')}

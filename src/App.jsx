@@ -12,10 +12,12 @@ import {
   RefreshCw,
   Disc3,
   FolderOpen,
+  Menu,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Tooltip, TooltipTrigger, TooltipPopup, TooltipProvider } from '@/components/ui/tooltip'
+import { Sheet, SheetPopup, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import Sidebar from '@/components/Sidebar'
 import Playlist from '@/components/Playlist'
 import ContextMenu from '@/components/ContextMenu'
@@ -55,6 +57,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [contextMenu, setContextMenu] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const audioRef = useRef(null)
 
   // Theme init
@@ -171,6 +174,14 @@ export default function App() {
     }
     return files
   }, [files, activeCategory, favorites, categories])
+
+  // Current category label for header display
+  const activeCategoryLabel = useMemo(() => {
+    if (activeCategory === 'all') return t('all')
+    if (activeCategory === 'favorites') return t('favorites')
+    const cat = categories.find(c => c.id === activeCategory)
+    return cat?.label || ''
+  }, [activeCategory, categories, t])
 
   // Metadata loading
   const loadMetadata = useCallback(async (file) => {
@@ -366,8 +377,17 @@ export default function App() {
       {/* Header */}
       <header className="flex items-center justify-between border-b px-4 py-2 shrink-0">
         <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger render={<Button variant="ghost" size="icon-xs" onClick={() => setSidebarOpen(true)} aria-label={t('library')} />}>
+              <Menu className="size-4" />
+            </TooltipTrigger>
+            <TooltipPopup>{t('library')}</TooltipPopup>
+          </Tooltip>
           <Music className="size-5 text-primary" />
           <h1 className="text-lg font-semibold">{t('appTitle')}</h1>
+          {activeCategoryLabel && (
+            <span className="text-sm text-muted-foreground font-normal ml-1">— {activeCategoryLabel}</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Tooltip>
@@ -387,14 +407,23 @@ export default function App() {
 
       {/* Main content area */}
       <div className="flex flex-1 min-h-0">
-        {/* Sidebar */}
-        <Sidebar
-          files={files}
-          categories={categories}
-          favorites={favorites}
-          activeCategory={activeCategory}
-          onSelectCategory={setActiveCategory}
-        />
+        {/* Sidebar as Sheet */}
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetPopup side="left">
+            <SheetTitle className="sr-only">{t('library')}</SheetTitle>
+            <SheetDescription className="sr-only">{t('library')}</SheetDescription>
+            <Sidebar
+              files={files}
+              categories={categories}
+              favorites={favorites}
+              activeCategory={activeCategory}
+              onSelectCategory={(cat) => {
+                setActiveCategory(cat)
+                setSidebarOpen(false)
+              }}
+            />
+          </SheetPopup>
+        </Sheet>
 
         {/* Playlist area */}
         <div className="flex-1 min-w-0">
@@ -422,8 +451,18 @@ export default function App() {
       </div>
 
       {/* Fixed bottom player bar — always visible */}
-      <div className="border-t bg-card px-4 py-2 shrink-0">
-        <div className="flex items-center gap-4">
+      <div className="relative bg-card px-4 pt-0 pb-2 shrink-0">
+        {/* Progress bar replaces border-top */}
+        <div className="w-full h-3 -mx-4 px-0 cursor-pointer">
+          <Slider
+            value={isFinite(currentTime) ? [currentTime] : [0]}
+            max={isFinite(duration) && duration > 0 ? duration : 100}
+            step={0.1}
+            onValueChange={handleSeek}
+            className="w-full h-full [&_[data-slot=slider-track]]:rounded-none [&_[data-slot=slider-track]]:h-full [&_[data-slot=slider-track]]:bg-border [&_[data-slot=slider-track]]:shadow-inner [&_[data-slot=slider-range]]:rounded-none [&_[data-slot=slider-range]]:h-full [&_[data-slot=slider-range]]:bg-primary [&_[data-slot=slider-thumb]]:size-3 [&_[data-slot=slider-thumb]]:opacity-0 hover:[&_[data-slot=slider-thumb]]:opacity-100 [&_[data-slot=slider-thumb]]:transition-opacity [&_[data-slot=slider-thumb]]:-mt-0.5"
+          />
+        </div>
+        <div className="flex items-center gap-4 pt-1">
           {/* Track info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="size-10 rounded-md bg-muted flex items-center justify-center shrink-0">
@@ -494,12 +533,11 @@ export default function App() {
             </Tooltip>
           </div>
 
-          {/* Progress + volume */}
+          {/* Time + volume */}
           <div className="flex items-center gap-2 flex-1 justify-end">
             <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">
               {formatTime(currentTime)}
             </span>
-            <Slider value={isFinite(currentTime) ? [currentTime] : [0]} max={isFinite(duration) && duration > 0 ? duration : 100} step={0.1} onValueChange={handleSeek} className="w-32 [&_[data-slot=slider-thumb]]:size-3.5" />
             <span className="text-xs text-muted-foreground w-10 tabular-nums">
               {formatTime(duration)}
             </span>
