@@ -165,10 +165,17 @@ function doScan() {
     files.sort((a, b) => a.name.localeCompare(b.name))
 
     const categories = [{ id: 'all', label: null, dirName: null, count: files.length }, ...scanDirs(dirPath)]
-    musicDb = { files, categories }
+    const newDb = { files, categories }
+
+    if (JSON.stringify(musicDb) === JSON.stringify(newDb)) {
+        if (DEBUG) console.log('[Scan] No changes detected, skipping DB write')
+        return musicDb
+    }
+
+    musicDb = newDb
     saveDb()
 
-    if (DEBUG) console.log(`[Scan] Found ${files.length} audio files`)
+    if (DEBUG) console.log(`[Scan] Found ${files.length} audio files (DB updated)`)
     if (DEBUG && files.length > 0) {
         files.slice(0, 5).forEach(f => console.log(`  -> id=${f.id} path=${f.path}`))
         if (files.length > 5) console.log(`  ... and ${files.length - 5} more`)
